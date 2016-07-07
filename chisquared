@@ -1,0 +1,85 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+#Optional, works if using Jupyter #jupytersostrong
+%matplotlib inline
+
+######################################################################################
+######################################################################################
+#########################      CHI-SQUARED FUNCTION     ##############################
+######################################################################################
+######################################################################################
+
+def chi2_func(A0, A1, X, SIG, D): # Define a Python function "def function_name(input1, input2,...):"
+    chi2 = []               # Set up an empty list that values will be added to in the for loops
+    for i in A0:            # For every value in A0 (our list of guesses for the intercept of the line),
+        for j in A1:        # check with every value in A1 (the list of guesses for the slope) and find chi-squared
+            chi2 += [np.sum(((i + j*X - D)/SIG)**2)] # The "+=" means add this number (the chi-squared result) to
+                                                     # the "chi2 = []" list
+    return chi2 # Store the list of chi-squared results in                                
+                # the variable the user specifies (the variable called "chi2_results" below)
+
+# Based on the lists of guesses for a slope and an intercept, the chi-squared will be computed for
+# every combinaiton of the guesses and return this in a list (the same "chi2 = []" list from above)
+
+######################################################################################
+######################################################################################
+#######################       APPLYING THE CHI-SQUARED      ##########################
+######################################################################################
+######################################################################################
+
+# Open the text file and assign each column to a variable (unpack  = True),
+# skip the first row of text (skiprows = 1),
+# signal that each column is separated by a comma (delimiter = ',')
+x_data, x_data_err, y_data, y_data_err = np.loadtxt('Lopez-Morales07_table1.txt', delimiter = ',', skiprows=1, unpack = True)
+
+intercept_guesses = np.linspace(-0.2,0.2,10) # Lists of guesses for the line's slope and intercept
+slope_guesses = np.linspace(0.6,1.4,10)      # We use *10* different guesses for each for total of *100* combinations
+
+# Call the "chi()" function and store it in the variable "chi2_func"
+chi2_results = chi2_func(intercept_guesses, slope_guesses, x_data, y_data_err, y_data)
+
+chi2_results_2d = np.array(chi2_results).reshape((10,10)) # Reshape the 100 combinations of guesses into a 2-D 10x10 grid;
+                                                      # this is useful for diplaying the results since we have 2 different
+                                                      # parameters we are guessing
+
+# The best slope and best intercept are the values from "intercept_guesses" and "slope_guesses" that
+# give the lowest (minimized) chi-squared value--hence the phrase "chi-squared minimization"
+# The "np.where()" function finds where the chi-squared is smallest with "np.min()"
+best_slope = slope_guesses[np.where(chi2_results_2d == np.min(chi2_results_2d))[0][0]] 
+best_intercept = intercept_guesses[np.where(chi2_results_2d == np.min(chi2_results_2d))[1][0]]
+
+# Now that the chi-squared results have a known minimum with "best_slope" and "best_intercept",
+# you can use those best parameters in the equation for a line:
+best_line = best_intercept + x_data*best_slope
+
+######################################################################################
+######################################################################################
+############################       PRETTY PLOTTING       #############################
+######################################################################################
+######################################################################################
+
+xlabels, ylabels = intercept_guesses, slope_guesses # Labels for the tickmarks in the image plot
+
+colormap = 'gist_earth' # More colormaps here: http://matplotlib.org/examples/color/colormaps_reference.html
+
+# Plot the 2-D 10x10 grid with the list of guesses on each axis and showing 
+# which combination of guesses gives the most minimized chi-squared
+plt.figure(figsize = (8,8))
+ax = plt.gca()
+im, div = ax.imshow(chi2_results_2d, cmap = colormap, interpolation = 'None'), make_axes_locatable(ax)
+plt.xticks([0,1,2,3,4,5,6,7,8,9],np.around(xlabels,3), fontsize = 12)
+plt.yticks([9,8,7,6,5,4,3,2,1,0],np.around(ylabels,3), fontsize = 12)
+plt.xlabel('Intercept Guesses', fontsize = 15), plt.ylabel('Slope Guesses', fontsize = 15)
+plt.title('Best Intercept: '+str(np.around(best_intercept,3))+' | Best Slope: '+str(np.around(best_slope,3)), fontsize = 16)
+cax = div.append_axes("right", size="5%", pad=0.05)
+plt.colorbar(im, cax = cax)
+plt.show()
+
+# Plot a line ("best_line") to see how well it matches your data
+plt.figure(figsize = (10,8))
+plt.plot(x_data,y_data, 'bo')
+plt.plot(x_data,best_line,'g-', linewidth = 1.5)
+plt.xlabel(r'$M_{star}$', fontsize = 18), plt.ylabel(r'$R_{star}$', fontsize = 18)
+plt.title('Stellar mass and radius with best fitting line', fontsize = 15)
+plt.show()
